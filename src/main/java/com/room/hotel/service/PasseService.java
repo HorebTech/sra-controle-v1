@@ -30,6 +30,7 @@ public class PasseService {
     private final PasseRepository repository;
     private final UtilisateurRepository utilisateurRepository;
     private final StatutRepository statutRepository;
+    private final StatutService statutService;
     private final PasseMapper mapper;
 
     @Transactional
@@ -38,10 +39,16 @@ public class PasseService {
         Utilisateur utilisateur = utilisateurRepository.findByNom(request.getAgent()).orElseThrow(()-> new ResourceNotFoundException("Utilisateur non trouvé!"));
         var userConnected = (Utilisateur)((UsernamePasswordAuthenticationToken) connectedUser).getPrincipal();
         Utilisateur gouvernante = utilisateurRepository.findById(userConnected.getId()).orElseThrow(()-> new ResourceNotFoundException("Utilisateur non trouvé!"));
-        
-        Statut statut = statutRepository.findByNom(request.getStatut())
-                .orElseThrow(() -> new ResourceNotFoundException("Aucun statut trouvé!"));
 
+        // Vérification si le statut existe, sinon création
+        Statut statut = statutRepository.findByNom(request.getStatut())
+        .orElseGet(() -> {
+            // Création et retour du nouveau statut
+            Statut newStatut = new Statut();
+            newStatut.setNom(request.getStatut());
+            return statutRepository.save(newStatut);
+        });
+        
         if(request.getCommentaire() != null && !request.getCommentaire().isEmpty()){
             passe.setCommentaire(request.getCommentaire());
         }
@@ -100,10 +107,20 @@ public class PasseService {
     @Transactional
     public PasseDto updateState(Long id, String nom) throws IOException {
         Passe oldPasse = repository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Aucun passe trouvé!"));
+            .orElseThrow(() -> new ResourceNotFoundException("Aucun passe trouvé!"));
+
+        // Vérification si le statut existe, sinon création
         Statut statut = statutRepository.findByNom(nom)
-                .orElseThrow(() -> new ResourceNotFoundException("Aucun statut trouvé!"));
+        .orElseGet(() -> {
+            // Création et retour du nouveau statut
+            Statut newStatut = new Statut();
+            newStatut.setNom(nom);
+            return statutRepository.save(newStatut);
+        });
+
+        // Mise à jour du statut dans l'objet Passe
         oldPasse.setStatut(statut);
+
         Passe updatedPasse = repository.save(oldPasse);
         return mapper.toDto(updatedPasse);
     }
@@ -114,8 +131,11 @@ public class PasseService {
         Passe oldPasse = repository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Aucun passe trouvé!"));
         Utilisateur utilisateur = utilisateurRepository.findByNom(request.getAgent()).orElseThrow(()-> new ResourceNotFoundException("Utilisateur non trouvé!"));
-        Statut statut = statutRepository.findByNom(request.getStatut())
-                .orElseThrow(() -> new ResourceNotFoundException("Aucun statut trouvé!"));
+
+        Statut statut = statutRepository.findByNom(request.getStatut()).orElseThrow();
+        if(statut == null) {
+            statutService.create(request.getStatut());
+        }
         if(!request.getCommentaire().isEmpty()){
             oldPasse.setCommentaire(request.getCommentaire());
         }

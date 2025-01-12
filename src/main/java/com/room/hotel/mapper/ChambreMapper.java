@@ -21,6 +21,8 @@ public interface ChambreMapper {
     Chambre toEntity(ChambreDto chambreDto);
 
     @Mapping(target = "gouvernante", ignore = true)
+    @Mapping(target = "chambreChoisie", ignore = true)
+    @Mapping(target = "salleChoisie", ignore = true)
     PasseDto toDto(Passe passe);
     @Mapping(target = "creationDate", ignore = true)
     @Mapping(target = "modificationDate", ignore = true)

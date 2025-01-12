@@ -15,50 +15,47 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.room.hotel.dto.StatutDto;
-import com.room.hotel.service.StatutService;
+import com.room.hotel.dto.MarqueDto;
+import com.room.hotel.service.MarqueService;
 import static com.room.hotel.utils.ApiUrls.ROOT_URL;
 
 import lombok.RequiredArgsConstructor;
 
 @RestController
 @RequiredArgsConstructor
-@PreAuthorize("hasAnyRole('ROLE_GOUVERNANTE','ROLE_MANAGER', 'ROLE_ADMIN')")
-@RequestMapping(ROOT_URL + "/statut")
-public class StatutController {
-
-    private final StatutService statutService;
-
+@RequestMapping(ROOT_URL + "/marque")
+public class MarqueController {
+    
+    private final MarqueService marqueService;
+    
     @PostMapping("/create")
-    public ResponseEntity<StatutDto> createStatut(@RequestBody StatutDto dto) throws IOException {
-        return ResponseEntity.ok(statutService.createStatut(dto));
-    }
-
-    @PostMapping("/create/{nom}")
-    public ResponseEntity<StatutDto> create(@PathVariable String nom) throws IOException {
-        return ResponseEntity.ok(statutService.create(nom));
+    @PreAuthorize("hasAnyRole('ROLE_GOUVERNANTE','ROLE_MANAGER', 'ROLE_ADMIN')")
+    public ResponseEntity<MarqueDto> create(@RequestBody MarqueDto dto) throws IOException {
+        return ResponseEntity.ok(marqueService.createMarque(dto));
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<StatutDto> update(@PathVariable UUID id, @RequestBody StatutDto statutDto)
+    @PreAuthorize("hasAnyRole('ROLE_GOUVERNANTE','ROLE_MANAGER', 'ROLE_ADMIN')")
+    public ResponseEntity<MarqueDto> update(@PathVariable UUID id, @RequestBody MarqueDto marqueDto)
             throws IOException {
-        return ResponseEntity.ok(statutService.updateStatut(id, statutDto));
+        return ResponseEntity.ok(marqueService.updateMarque(id, marqueDto));
     }
 
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasAnyRole('ROLE_GOUVERNANTE','ROLE_MANAGER', 'ROLE_ADMIN')")
     public ResponseEntity<Void> delete(@PathVariable UUID id) {
-        statutService.deleteStatut(id);
+        marqueService.deleteMarque(id);
         return ResponseEntity.noContent().build();
     }
 
     @GetMapping("/get-all")
-    public ResponseEntity<List<StatutDto>> getAllStatuts(){
-        return ResponseEntity.ok(statutService.findAllStatuts());
+    public ResponseEntity<List<MarqueDto>> getAllMarques(){
+        return ResponseEntity.ok(marqueService.findAllMarques());
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<StatutDto> getStatut(@PathVariable UUID id) {
-        return ResponseEntity.ok(statutService.getStatut(id));
+    public ResponseEntity<MarqueDto> getMarque(@PathVariable UUID id) {
+        return ResponseEntity.ok(marqueService.getMarque(id));
     }
 
 }

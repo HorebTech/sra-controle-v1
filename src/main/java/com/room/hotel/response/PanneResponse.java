@@ -14,7 +14,7 @@ import lombok.Data;
 public class PanneResponse {
     private String description;
     private String nomEquipement;
-    private String marqueEquipement;
+    private MarqueResponse marqueEquipement;
     private String photo;
     private String date;
     private StatutResponse statut;

@@ -46,7 +46,8 @@ public class SalleChoisieService {
         SalleChoisie salleChoisie = new SalleChoisie();
         salleChoisie.setPasse(passe);
         salleChoisie.setSalle(salle);
-        salleService.updateSalleEtat(salle.getId(), "Attribuer");
+        
+        salleService.updateSalleEtat(salle.getId(), "Attribué");
 
         SalleChoisie savedSalleChoisie = repository.save(salleChoisie);
         return mapper.toDto(savedSalleChoisie);

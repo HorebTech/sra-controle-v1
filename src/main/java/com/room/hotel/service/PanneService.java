@@ -6,24 +6,27 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.LocalDateTime;
-import java.util.Base64;
+import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Service;
 
+import com.room.hotel.dto.PanneCountByMarqueDto;
 import com.room.hotel.dto.PanneDto;
 import com.room.hotel.exception.ResourceNotFoundException;
 import com.room.hotel.mapper.PanneMapper;
 import com.room.hotel.model.Chambre;
 import com.room.hotel.model.ChambreChoisie;
+import com.room.hotel.model.Marque;
 import com.room.hotel.model.Panne;
 import com.room.hotel.model.Salle;
 import com.room.hotel.model.SalleChoisie;
 import com.room.hotel.model.Statut;
 import com.room.hotel.repository.ChambreChoisieRepository;
 import com.room.hotel.repository.ChambreRepository;
+import com.room.hotel.repository.MarqueRepository;
 import com.room.hotel.repository.PanneRepository;
 import com.room.hotel.repository.SalleChoisieRepository;
 import com.room.hotel.repository.SalleRepository;
@@ -44,7 +47,9 @@ public class PanneService {
     private final ChambreChoisieRepository chambreChoisieRepository;
     private final StatutRepository statutRepository;
     private final SalleChoisieRepository salleChoisieRepository;
-    private static final String UPLOAD_DIR="src/main/resources/static/pannes/";
+    private final MarqueRepository marqueRepository;
+    private final ImageService imageService;
+    private static final String UPLOAD_DIR = "uploads/";
 
     @Transactional
     public PanneDto create(PanneRequest request) throws IOException {
@@ -52,24 +57,32 @@ public class PanneService {
 
         ChambreChoisie chambreChoisie = chambreChoisieRepository.findById(Id).isPresent() ? chambreChoisieRepository.findById(Id).get() : null;
         SalleChoisie salleChoisie = salleChoisieRepository.findById(Id).isPresent() ? salleChoisieRepository.findById(Id).get() : null;
+        Marque marque =  marqueRepository.findByNom(request.getMarqueEquipement()).isPresent() ? marqueRepository.findByNom(request.getMarqueEquipement()).get(): null;
 
         /* Initialize Pane and joined present entities ***/
         Panne panne = new Panne();
         panne.setChambreChoisie(chambreChoisie);
         panne.setSalleChoisie(salleChoisie);
 
+        // Vérification si le statut existe, sinon création
         Statut statut = statutRepository.findByNom(request.getStatut())
-                .orElseThrow(() -> new ResourceNotFoundException("Status not found!"));
+        .orElseGet(() -> {
+            // Création et retour du nouveau statut
+            Statut newStatut = new Statut();
+            newStatut.setNom(request.getStatut());
+            return statutRepository.save(newStatut);
+        });
 
         panne.setStatut(statut);
         panne.setDescription(request.getDescription());
         panne.setNomEquipement(request.getNomEquipement());
         panne.setDate(request.getDate());
-        panne.setMarqueEquipement(request.getMarqueEquipement());
+        panne.setMarqueEquipement(marque);
 
 
         /* Manage picture ****/
-        String nomImage = saveImage(request.getImageBase64());
+        String nomImage = imageService.saveImage(request.getImageBase64(), "pannes");
+        // String nomImage = saveImage(request.getImageBase64());
         panne.setPhoto(nomImage);
 
         return mapper.toDto(repository.save(panne));
@@ -106,15 +119,28 @@ public class PanneService {
     /**** Modifier l'état d'un problème technique ****/
     @Transactional
     public PanneDto updateState(UUID id, PanneRequest request) throws IOException {
+        
         Panne oldPanne = repository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Aucun problème technique trouvé avec cet ID!"));
+
+        if(request.getNomEquipement() != null){
+            oldPanne.setNomEquipement(request.getNomEquipement());
+        }
         
-        Statut state = statutRepository.findByNom(request.getStatut())
-                .orElseThrow(() -> new ResourceNotFoundException("Aucun statut trouvé!"));
-        oldPanne.setStatut(state);
-        oldPanne.setDescription(request.getDescription());
-        oldPanne.setMarqueEquipement(request.getMarqueEquipement());
-        oldPanne.setNomEquipement(request.getNomEquipement());
+        Statut statut = statutRepository.findByNom(request.getStatut())
+        .orElseGet(() -> {
+            // Création et retour du nouveau statut
+            Statut newStatut = new Statut();
+            newStatut.setNom(request.getStatut());
+            return statutRepository.save(newStatut);
+        });
+        oldPanne.setStatut(statut);
+
+        if(request.getDescription() != null){
+            oldPanne.setDescription(request.getDescription());
+        }
+        oldPanne.setMarqueEquipement(oldPanne.getMarqueEquipement());
+
         Panne updated = repository.save(oldPanne);
         return mapper.toDto(updated);
     }
@@ -149,40 +175,22 @@ public class PanneService {
         return repository.findRoomBetweenDates(dateDebut, dateFin);
     }
 
-    private String saveImage(String imageBase64) throws IOException {
-        if (imageBase64 == null || !imageBase64.contains(",")) {
-            throw new IllegalArgumentException("Données d'image invalides ou non fournies.");
-        }
-
-        /* Separate metadata and image data ****/
-        String[] splitted = imageBase64.split(",");
-        String metadata = splitted[0];
-        String base64Data = splitted[1];
-
-        /* Check the MIME type of the image ****/
-        String imageType = metadata.split(";")[0].split(":")[1];
-        if (!imageType.startsWith("image/")) {
-            throw new IllegalArgumentException("Le type de fichier n'est pas une image valide.");
-        }
-
-        /* Decode Base64 data *****/
-        byte[] imageBytes;
-        try {
-            imageBytes = Base64.getDecoder().decode(base64Data);
-        } catch (IllegalArgumentException e) {
-            throw new IllegalArgumentException("Les données de l'image sont mal encodées en Base64.", e);
-        }
-
-        /* Manage a unique name for picture *****/
-        String extension = imageType.split("/")[1];
-        String nomImage = UUID.randomUUID() + "." + extension;
-
-        /* Determine the path and save the image *****/
-        Path path = Paths.get(UPLOAD_DIR, nomImage);
-        Files.createDirectories(path.getParent()); // Create necessary repositories if non exist
-        Files.write(path, imageBytes); // Write data in the file
-
-        return nomImage;
+    public List<PanneCountByMarqueDto> getPannesCountByMarqueIncludingEmpty() {
+        List<Object[]> results = repository.countPannesByMarqueIncludingEmpty();
+    
+        // Transformation des résultats
+        return results.stream()
+                .map(result -> {
+                    if (result[0] != null && result[1] != null) {
+                        String marque = String.valueOf(result[0]); // Convertit explicitement en String
+                        Long total = ((Number) result[1]).longValue(); // Convertit explicitement en Long
+                        return new PanneCountByMarqueDto(marque, total);
+                    } else {
+                        throw new IllegalArgumentException("Les données retournées par la requête sont invalides : " + Arrays.toString(result));
+                    }
+                })
+                .collect(Collectors.toList());
     }
+    
 
 }

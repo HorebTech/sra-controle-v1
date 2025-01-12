@@ -5,7 +5,6 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.Base64;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -42,8 +41,9 @@ public class ObjetService {
     private final SalleChoisieRepository salleChoisieRepository;
     private final ChambreRepository chambreRepository;
     private final SalleRepository salleRepository;
+    private final ImageService imageService;
     private final StatutRepository statutRepository;
-    private static final String UPLOAD_DIR="src/main/resources/static/objets/";
+    private static final String UPLOAD_DIR = "uploads/";
 
     @Transactional
     public ObjetDto create(ObjetRequest request) throws IOException {
@@ -57,17 +57,23 @@ public class ObjetService {
         objet.setChambreChoisie(chambreChoisie);
         objet.setSalleChoisie(salleChoisie);
 
-        /* Join state to Object ***/
-        objet.setStatut(statutRepository.findByNom(request.getStatut())
-                .orElseThrow(() -> new ResourceNotFoundException("Status not found!")));
+        // Vérification si le statut existe, sinon création
+        Statut statut = statutRepository.findByNom(request.getStatut())
+        .orElseGet(() -> {
+            // Création et retour du nouveau statut
+            Statut newStatut = new Statut();
+            newStatut.setNom(request.getStatut());
+            return statutRepository.save(newStatut);
+        });
 
         /* Define the properties of the object ***/
         objet.setDescription(request.getDescription());
 
         /* Manage picture ****/
-        String nomImage = saveImage(request.getImageBase64());
+        String nomImage = imageService.saveImage(request.getImageBase64(), "objets");
+        // String nomImage = saveImage(request.getImageBase64());
         objet.setPhoto(nomImage);
-
+        objet.setStatut(statut);
         /* Save Object et return DTO ***/
         return mapper.toDto(repository.save(objet));
     }
@@ -83,10 +89,18 @@ public class ObjetService {
     public ObjetDto updateState(UUID id, ObjetRequest request) throws IOException {
         Objet oldObjet = repository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Aucun trouvé trouvé avec cet ID!"));
-        Statut state = statutRepository.findByNom(request.getStatut())
-                .orElseThrow(() -> new ResourceNotFoundException("Aucun statut trouvé!"));
-        oldObjet.setStatut(state);
-        oldObjet.setDescription(request.getDescription());
+        // Vérification si le statut existe, sinon création
+        Statut statut = statutRepository.findByNom(request.getStatut())
+        .orElseGet(() -> {
+            // Création et retour du nouveau statut
+            Statut newStatut = new Statut();
+            newStatut.setNom(request.getStatut());
+            return statutRepository.save(newStatut);
+        });
+        oldObjet.setStatut(statut);
+        if(request.getDescription() != null){
+            oldObjet.setDescription(request.getDescription());
+        }
         Objet updated = repository.save(oldObjet);
         return mapper.toDto(updated);
     }
@@ -123,42 +137,5 @@ public class ObjetService {
         repository.deleteById(id);
         return mapper.toDto(oldObjet);
     }
-
-    private String saveImage(String imageBase64) throws IOException {
-        if (imageBase64 == null || !imageBase64.contains(",")) {
-            throw new IllegalArgumentException("Données d'image invalides ou non fournies.");
-        }
-
-        /* Separate metadata and image data ****/
-        String[] splitted = imageBase64.split(",");
-        String metadata = splitted[0];
-        String base64Data = splitted[1];
-
-        /* Check the MIME type of the image ****/
-        String imageType = metadata.split(";")[0].split(":")[1];
-        if (!imageType.startsWith("image/")) {
-            throw new IllegalArgumentException("Le type de fichier n'est pas une image valide.");
-        }
-
-        /* Decode Base64 data *****/
-        byte[] imageBytes;
-        try {
-            imageBytes = Base64.getDecoder().decode(base64Data);
-        } catch (IllegalArgumentException e) {
-            throw new IllegalArgumentException("Les données de l'image sont mal encodées en Base64.", e);
-        }
-
-        /* Manage a unique name for picture *****/
-        String extension = imageType.split("/")[1];
-        String nomImage = UUID.randomUUID() + "." + extension;
-
-        /* Determine the path and save the image *****/
-        Path path = Paths.get(UPLOAD_DIR, nomImage);
-        Files.createDirectories(path.getParent()); // Create necessary repositories if non exist
-        Files.write(path, imageBytes); // Write data in the file
-
-        return nomImage;
-    }
-
 
 }

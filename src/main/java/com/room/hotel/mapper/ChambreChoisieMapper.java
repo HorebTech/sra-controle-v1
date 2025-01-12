@@ -8,6 +8,7 @@ import com.room.hotel.model.ChambreChoisie;
 
 @Mapper(componentModel = "spring")
 public interface ChambreChoisieMapper {
+    
     ChambreChoisieDto toDto(ChambreChoisie chambreChoisie);
 
     @Mapping(target = "creationDate", ignore = true)

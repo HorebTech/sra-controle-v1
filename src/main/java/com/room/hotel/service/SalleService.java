@@ -7,15 +7,15 @@ import java.util.Objects;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
-import com.room.hotel.mapper.SalleMapper;
-import com.room.hotel.model.Statut;
-import com.room.hotel.repository.StatutRepository;
 import org.springframework.stereotype.Service;
 
 import com.room.hotel.dto.SalleDto;
 import com.room.hotel.exception.ResourceNotFoundException;
+import com.room.hotel.mapper.SalleMapper;
 import com.room.hotel.model.Salle;
+import com.room.hotel.model.Statut;
 import com.room.hotel.repository.SalleRepository;
+import com.room.hotel.repository.StatutRepository;
 import com.room.hotel.request.SalleRequest;
 
 import jakarta.transaction.Transactional;
@@ -72,8 +72,15 @@ public class SalleService {
     public SalleDto updateSalleEtat(UUID id, String statut) throws IOException {
         Salle oldSalle = repository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Aucune salle trouvée!"));
+
+        // Vérification si le statut existe, sinon création
         Statut state = statutRepository.findByNom(statut)
-                .orElseThrow(() -> new ResourceNotFoundException("Aucun statut trouvé!"));
+        .orElseGet(() -> {
+            // Création et retour du nouveau statut
+            Statut newStatut = new Statut();
+            newStatut.setNom(statut);
+            return statutRepository.save(newStatut);
+        });
         oldSalle.setStatut(state);
         Salle updatedSalle = repository.save(oldSalle);
         return mapper.toDto(updatedSalle);

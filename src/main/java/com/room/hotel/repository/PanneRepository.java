@@ -28,4 +28,12 @@ public interface PanneRepository extends JpaRepository<Panne, UUID> {
     @Query("SELECT p.chambreChoisie.chambre.numero, COUNT(p) AS nombrePannes FROM Panne p WHERE p.creationDate BETWEEN :dateDebut AND :dateFin GROUP BY p.chambreChoisie.chambre.numero HAVING COUNT(p) = (SELECT MAX(nombrePannes) FROM (SELECT COUNT(p2) AS nombrePannes FROM Panne p2 WHERE p2.creationDate BETWEEN :dateDebut AND :dateFin GROUP BY p2.chambreChoisie.chambre.numero))")
     List<Object[]> findRoomBetweenDates(@Param("dateDebut") LocalDateTime dateDebut, @Param("dateFin") LocalDateTime dateFin);
 
+    @Query("SELECT p.marqueEquipement.nom, COUNT(p) FROM Panne p GROUP BY p.marqueEquipement.nom")
+    List<Object[]> countPannesByMarque();
+
+    @Query("SELECT m.nom, COUNT(p) " +
+    "FROM Marque m " +
+    "LEFT JOIN Panne p ON p.marqueEquipement.id = m.id " +
+    "GROUP BY m.nom")
+    List<Object[]> countPannesByMarqueIncludingEmpty();
 }

@@ -33,6 +33,17 @@ public class StatutService {
     }
 
     @Transactional
+    public StatutDto create(String nom) throws IOException {
+        if (repository.findByNom(nom).isPresent()) {
+            throw new ResourceNotFoundException("Cet état existe déjà !");
+        }
+        Statut statut = new Statut();
+        statut.setNom(nom);
+        Statut savedStatut = repository.save(statut);
+        return mapper.toDto(savedStatut);
+    }
+
+    @Transactional
     public void deleteStatut(UUID id) {
         if (!repository.existsById(id)) {
             throw new ResourceNotFoundException("Aucun Statut trouvé!");

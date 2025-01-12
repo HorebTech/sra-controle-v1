@@ -14,6 +14,7 @@ public interface PanneMapper {
     @Mapping(target = "chambreChoisie", ignore = true)
     @Mapping(target = "salleChoisie", ignore = true)
     @Mapping(target = "statut", ignore = true)
+    @Mapping(target = "marqueEquipement", ignore = true)
     Panne toEntity(PanneDto panneDto);
 
 }

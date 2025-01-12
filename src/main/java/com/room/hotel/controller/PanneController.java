@@ -3,6 +3,7 @@ package com.room.hotel.controller;
 import java.io.IOException;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
 import java.util.List;
 import java.util.UUID;
 
@@ -16,6 +17,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.room.hotel.dto.PanneCountByMarqueDto;
 import com.room.hotel.dto.PanneDto;
 import com.room.hotel.request.PanneRequest;
 import com.room.hotel.service.PanneService;
@@ -81,11 +83,22 @@ public class PanneController {
     public ResponseEntity<Object> findRoomBetweenDates(
             @PathVariable String dateDebut,
             @PathVariable String dateFin
-    ){
-        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
-        LocalDateTime dateDebutLocalDateTime = LocalDateTime.parse(dateDebut, formatter);
-        LocalDateTime dateFinLocalDateTime = LocalDateTime.parse(dateFin, formatter);
-        return ResponseEntity.ok(service.getByRoomBetweenDates(dateDebutLocalDateTime, dateFinLocalDateTime));
+    ) {
+        try {
+            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+            LocalDateTime dateDebutLocalDateTime = LocalDateTime.parse(dateDebut, formatter);
+            LocalDateTime dateFinLocalDateTime = LocalDateTime.parse(dateFin, formatter);
+
+            return ResponseEntity.ok(service.getByRoomBetweenDates(dateDebutLocalDateTime, dateFinLocalDateTime));
+        } catch (DateTimeParseException e) {
+            return ResponseEntity.badRequest().body("Invalid date format. Expected format: yyyy-MM-dd HH:mm:ss");
+        }
+    }
+
+    @GetMapping("/count-by-marque")
+    public ResponseEntity<List<PanneCountByMarqueDto>> getPannesCountByMarqueIncludingEmpty() {
+        List<PanneCountByMarqueDto> result = service.getPannesCountByMarqueIncludingEmpty();
+        return ResponseEntity.ok(result);
     }
 
 }

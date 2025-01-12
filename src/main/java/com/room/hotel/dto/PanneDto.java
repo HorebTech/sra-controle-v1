@@ -7,6 +7,7 @@ import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.room.hotel.response.ChambreChoisieResponse;
+import com.room.hotel.response.MarqueResponse;
 import com.room.hotel.response.SalleChoisieResponse;
 import com.room.hotel.response.StatutResponse;
 
@@ -19,7 +20,7 @@ public class PanneDto {
     private UUID id;
     private String description;
     private String nomEquipement;
-    private String marqueEquipement;
+    private MarqueResponse marqueEquipement;
     private ChambreChoisieResponse chambreChoisie;
     private SalleChoisieResponse salleChoisie;
     private String photo;

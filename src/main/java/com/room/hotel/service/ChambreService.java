@@ -1,5 +1,13 @@
 package com.room.hotel.service;
 
+import java.io.IOException;
+import java.util.List;
+import java.util.Objects;
+import java.util.UUID;
+import java.util.stream.Collectors;
+
+import org.springframework.stereotype.Service;
+
 import com.room.hotel.dto.ChambreDto;
 import com.room.hotel.exception.ResourceNotFoundException;
 import com.room.hotel.mapper.ChambreMapper;
@@ -10,15 +18,9 @@ import com.room.hotel.repository.CategorieRepository;
 import com.room.hotel.repository.ChambreRepository;
 import com.room.hotel.repository.StatutRepository;
 import com.room.hotel.request.ChambreRequest;
+
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Service;
-
-import java.io.IOException;
-import java.util.List;
-import java.util.Objects;
-import java.util.UUID;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -76,9 +78,15 @@ public class ChambreService {
     public ChambreDto updateChambreEtat(UUID id, String statut) throws IOException {
         Chambre oldChambre = repository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Aucune chambre trouvée!"));
-        Statut state = statutRepository.findByNom(statut)
-                .orElseThrow(() -> new ResourceNotFoundException("Aucun statut trouvé!"));
-        oldChambre.setStatut(state);
+        // Vérification si le statut existe, sinon création
+        Statut etat = statutRepository.findByNom(statut)
+        .orElseGet(() -> {
+            // Création et retour du nouveau statut
+            Statut newStatut = new Statut();
+            newStatut.setNom(statut);
+            return statutRepository.save(newStatut);
+        });
+        oldChambre.setStatut(etat);
         Chambre updatedChambre = repository.save(oldChambre);
         return mapper.toDto(updatedChambre);
     }
