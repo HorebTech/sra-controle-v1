@@ -4,8 +4,11 @@ import java.io.IOException;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -99,6 +102,21 @@ public class PanneController {
     public ResponseEntity<List<PanneCountByMarqueDto>> getPannesCountByMarqueIncludingEmpty() {
         List<PanneCountByMarqueDto> result = service.getPannesCountByMarqueIncludingEmpty();
         return ResponseEntity.ok(result);
+    }
+
+    @GetMapping("/max-pannes-room")
+    public ResponseEntity<?> getTop3ChambresWithMostPannes() {
+        List<Object[]> top3Chambres = service.getTop3ChambresWithMostPannes();
+
+        // Transformer les résultats en un format JSON lisible
+        List<Map<String, Object>> response = top3Chambres.stream().map(row -> {
+            Map<String, Object> map = new HashMap<>();
+            map.put("numeroChambre", row[0]);       // Numéro de la chambre
+            map.put("nombreDePannes", row[1]);     // Nombre de pannes
+            return map;
+        }).collect(Collectors.toList());
+
+        return ResponseEntity.ok(response);
     }
 
 }

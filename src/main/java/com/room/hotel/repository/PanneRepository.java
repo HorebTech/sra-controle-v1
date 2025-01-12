@@ -4,6 +4,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -27,6 +28,25 @@ public interface PanneRepository extends JpaRepository<Panne, UUID> {
     /*** Requête pour récuperer la chambre avec le maximum de pannes **/
     @Query("SELECT p.chambreChoisie.chambre.numero, COUNT(p) AS nombrePannes FROM Panne p WHERE p.creationDate BETWEEN :dateDebut AND :dateFin GROUP BY p.chambreChoisie.chambre.numero HAVING COUNT(p) = (SELECT MAX(nombrePannes) FROM (SELECT COUNT(p2) AS nombrePannes FROM Panne p2 WHERE p2.creationDate BETWEEN :dateDebut AND :dateFin GROUP BY p2.chambreChoisie.chambre.numero))")
     List<Object[]> findRoomBetweenDates(@Param("dateDebut") LocalDateTime dateDebut, @Param("dateFin") LocalDateTime dateFin);
+
+//     @Query("SELECT p.chambreChoisie.chambre.numero, COUNT(p) AS nombrePannes " +
+//     "FROM Panne p " +
+//     "GROUP BY p.chambreChoisie.chambre.numero " +
+//     "HAVING COUNT(p) = ( " +
+//     "    SELECT MAX(nombrePannes) " +
+//     "    FROM ( " +
+//     "        SELECT COUNT(p2) AS nombrePannes " +
+//     "        FROM Panne p2 " +
+//     "        GROUP BY p2.chambreChoisie.chambre.numero " +
+//     "    ) " +
+//     ")")
+// List<Object[]> findRoomWithMaxPannes();
+
+@Query("SELECT p.chambreChoisie.chambre.numero, COUNT(p) AS nombrePannes " +
+       "FROM Panne p " +
+       "GROUP BY p.chambreChoisie.chambre.numero " +
+       "ORDER BY COUNT(p) DESC")
+List<Object[]> findTopChambresWithMostPannes(Pageable pageable);
 
     @Query("SELECT p.marqueEquipement.nom, COUNT(p) FROM Panne p GROUP BY p.marqueEquipement.nom")
     List<Object[]> countPannesByMarque();

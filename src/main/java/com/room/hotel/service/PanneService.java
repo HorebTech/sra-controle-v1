@@ -11,6 +11,8 @@ import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import com.room.hotel.dto.PanneCountByMarqueDto;
@@ -192,5 +194,9 @@ public class PanneService {
                 .collect(Collectors.toList());
     }
     
+    public List<Object[]> getTop3ChambresWithMostPannes() {
+        Pageable topThree = PageRequest.of(0, 3); // Limiter à 3 résultats
+        return repository.findTopChambresWithMostPannes(topThree);
+    }
 
 }
